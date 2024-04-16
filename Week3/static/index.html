@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Book List</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <h1>도서 목록</h1>
+    <div id="books-list"></div>
+
+    <h2>새 도서 추가</h2>
+    <form id="add-book-form">
+        <input type="text" id="title" placeholder="제목" required>
+        <input type="text" id="author" placeholder="저자" required>
+        <input type="text" id="description" placeholder="설명" required>
+        <input type="number" id="published_year" placeholder="출판 연도" required>
+        <button type="submit">도서 추가</button>
+    </form>
+
+    <script src="/static/js/script.js"></script>
+</body>
+</html>
