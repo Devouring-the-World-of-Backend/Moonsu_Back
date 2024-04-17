@@ -3,8 +3,11 @@ from schema import schema
 from db import model, database
 from typing import Optional
 from fastapi import HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 
-def create_user(db: Session, user: schema.UserCreate):
+async def create_user(db: AsyncSession, user: schema.UserCreate):
     db_user = model.User(
         uuid=user.uuid, 
         id=user.id, 
@@ -13,74 +16,102 @@ def create_user(db: Session, user: schema.UserCreate):
         email=user.email
     )
     db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
+    await db.commit()
+    await db.refresh(db_user)
     return db_user
 
-def get_user_by_id(db: Session, user_id: str):
-    return db.query(model.User).filter(model.User.id == user_id).first()
+async def get_user_by_id(db: AsyncSession, user_id: str):
+    query = select(model.User).where(model.User.id == user_id)
+    
+    res = await db.execute(query)
+    return res.scalars().first()
 
-def get_all_users(db: Session):
+async def get_all_users(db: AsyncSession):
     skip: int = 0
     limit: int = 100
-    return db.query(model.User).offset(skip).limit(limit).all()
+    query = select(model.User).offset(skip).limit(limit)
+    
+    res = await db.execute(query)
+    return res.scalars().all()
 
-def delete_user(db: Session, user_id: str):
-    db_user = db.query(model.User).filter(model.User.id == user_id).first()
-    if db_user:
-        db.delete(db_user)
-        db.commit()
-        return db_user
-    return None
-
-def create_book(db: Session, book: schema.BookCreate):
-    db_book = model.Libs(id=book.id, title=book.title, author=book.author)
+async def delete_user(db: AsyncSession, user_id: str):
+    query = select(model.User).where(model.User.id == user_id)
+    tmp = await db.execute(query)
+    res = tmp.scalars().first()
+    
+    if res:
+        await db.delete(res)
+        await db.commit()
+        return res
+    else:
+        return None
+    
+async def create_book(db: AsyncSession, book: schema.BookCreate):
+    db_book = model.Libs(
+        id=book.id, 
+        title=book.title, 
+        author=book.author
+    )
     db.add(db_book)
-    db.commit()
-    db.refresh(db_book)
+    await db.commit()
+    await db.refresh(db_book)
     return db_book
 
-def get_book_by_id(db: Session, book_id: int):
-    return db.query(model.Libs).filter(model.Libs.id == book_id).first()
+async def get_book_by_id(db: AsyncSession, book_id: int):
+    query = select(model.Libs).where(model.Libs.id == book_id)
+    
+    res = await db.execute(query)
+    return res.scalars().first()
 
-def get_all_books(db: Session):
+async def get_all_books(db: AsyncSession):
     skip: int = 0 
     limit: int = 100
-    return db.query(model.Libs).offset(skip).limit(limit).all()
+    query = select(model.Libs).offset(skip).limit(limit)
+    
+    res = await db.execute(query)
+    return res.scalars().all()
 
-def update_db_book(db: Session, book_id: int, New_book: schema.Book):
-    book_schema = db.query(model.Libs).filter(model.Libs.id == book_id).first()
-    if book_schema:
-        book_schema.title = New_book.title
-        book_schema.author = New_book.author
-        book_schema.published_year = New_book.published_year
-        db.commit()
-    return book_schema
-
-def delete_book(db: Session, book_id: int):
-    db_book = db.query(model.Libs).filter(model.Libs.id == book_id).first()
-    if db_book:
-        db.delete(db_book)
-        db.commit()
-        return db_book
+async def update_db_book(db: AsyncSession, book_id: int, New_book: schema.BookUpdate):
+    query = select(model.Libs).where(model.Libs.id == book_id)
+    tmp = await db.execute(query)
+    res = tmp.scalars().first()
+    
+    if res:
+        res.title = New_book.title
+        res.author = New_book.author
+        await db.commit()
+        await db.refresh(res)
+        return res
     return None
 
-def search_book(db: Session,
+async def delete_book(db: AsyncSession, book_id: int):
+    query = select(model.Libs).where(model.Libs.id == book_id)
+    tmp = await db.execute(query)
+    res = tmp.scalars().first()
+    
+    if res:
+        await db.delete(res)
+        await db.commit()
+        return res
+    else:
+        return None
+
+async def search_book(db: AsyncSession,
     title: Optional[str] = None, 
     author: Optional[str] = None
     ):
 
-    query = db.query(model.Libs)
+    query = select(model.Libs)
     
     if title:
         query = query.filter(model.Libs.title.ilike(f"%{title}%"))
     if author:
         query = query.filter(model.Libs.author.ilike(f"%{author}%"))
     
-    results = query.all()
-    
-    """
-    if results is None:
+    res = await db.execute(query)
+    books = res.scalars().all()
+
+    if not books:
         raise HTTPException(status_code=404, datail="No books founded")
-    """
-    return [schema.Book(id=book.id, title=book.title, author=book.author) for book in results]
+
+    return [schema.Book(id=book.id, title=book.title, author=book.author) for book in books]

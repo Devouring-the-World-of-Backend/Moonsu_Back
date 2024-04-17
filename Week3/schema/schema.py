@@ -27,6 +27,11 @@ class UserUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[str] = None
     
+class UserPublic(BaseModel):
+    id: str
+    name: str
+    email: str
+
 class User(BaseModel):
     uuid: int
     id: str
