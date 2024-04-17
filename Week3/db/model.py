@@ -2,6 +2,12 @@ from sqlalchemy import Column, Integer, String, ForeignKey, Table
 from sqlalchemy.orm import relationship
 from db.database import Base, engine
 
+lib_category = Table(
+    'lib_category',
+    Base.metadata,
+    Column('lib_id', Integer, ForeignKey('libs.id'), primary_key=True),
+    Column('category_id', Integer, ForeignKey('categories.id'), primary_key=True)
+)
 
 class User(Base):
     __tablename__ = 'users'
@@ -12,7 +18,7 @@ class User(Base):
     name = Column(String, nullable=False)
     email = Column(String, nullable=False)
 
-    libs = relationship("Libs", back_populates="users")
+    libs_borrowed = relationship("Libs", back_populates="borrowed_by")
     
 class Libs(Base):
     __tablename__ = 'libs'
@@ -23,7 +29,7 @@ class Libs(Base):
     
     user_id = Column(Integer, ForeignKey('users.uuid'), nullable=True)
     
-    users = relationship("User", back_populates="libs")
+    borrowed_by = relationship("User", back_populates="libs_borrowed")
     
 class Category(Base):
     __tablename__ = 'categories'
@@ -31,4 +37,5 @@ class Category(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
     
+    libs = relationship("Libs", secondary=lib_category, back_populates="categories")
     
