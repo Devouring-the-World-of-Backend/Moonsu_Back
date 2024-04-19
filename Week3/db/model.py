@@ -31,6 +31,8 @@ class Libs(Base):
     
     borrowed_by = relationship("User", back_populates="libs_borrowed")
     
+    categories = relationship("Category", secondary=lib_category, back_populates="libs")
+
 class Category(Base):
     __tablename__ = 'categories'
     

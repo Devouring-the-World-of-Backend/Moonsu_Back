@@ -54,14 +54,14 @@ async def create_book(book: schema.BookCreate, db: AsyncSession = Depends(get_db
 @router.get("/books/", response_model=List[schema.Book])
 async def get_books(db: AsyncSession = Depends(get_db)):
     libraries = await crud.get_all_books(db)
-    return [schema.Book(id=lib.id, title=lib.title, author=lib.author) for lib in libraries]
+    return [schema.Book(id=lib.id, title=lib.title, author=lib.author, user_id=lib.user_id) for lib in libraries]
 
 @router.get("/books/{book_id}/", response_model=schema.Book)
 async def get_book(book_id: int, db: AsyncSession = Depends(get_db)):
     book = await crud.get_book_by_id(db, book_id)
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
-    return schema.Book(id=book.id, title=book.title, author=book.author)
+    return schema.Book(id=book.id, title=book.title, author=book.author, user_id=book.user_id)
 
 # db에서 특정 도서를 업데이트
 @router.put("/books/{book_id}/")
@@ -75,6 +75,17 @@ async def update_book(book_id: int, updated_book: schema.BookUpdate, db: AsyncSe
 @router.delete("/books/{book_id}/", status_code=201)
 async def delete_book(book_id: int, db: AsyncSession = Depends(get_db)):
     db_book = await crud.delete_book(db, book_id)
+    if db_book is None:
+        raise HTTPException(status_code=404, detail="Book not found")
+    return db_book
+
+@router.put("/books/{book_id}/borrow/")
+async def borrow_book(book_id: int, user_uuid: int, db: AsyncSession = Depends(get_db)):
+    return await crud.borrow_book(db, book_id, user_uuid)
+
+@router.put("/books/{book_id}/return/")
+async def return_book(book_id: int, user_id: int, db: AsyncSession = Depends(get_db)):
+    db_book = await crud.return_book(db, book_id, user_id)
     if db_book is None:
         raise HTTPException(status_code=404, detail="Book not found")
     return db_book

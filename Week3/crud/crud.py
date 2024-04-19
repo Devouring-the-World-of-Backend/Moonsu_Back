@@ -115,3 +115,36 @@ async def search_book(db: AsyncSession,
         raise HTTPException(status_code=404, datail="No books founded")
 
     return [schema.Book(id=book.id, title=book.title, author=book.author) for book in books]
+
+async def borrow_book(db: AsyncSession, book_id: int, user_uuid: int):
+    query = select(model.Libs).where(model.Libs.id == book_id)
+    res = await db.execute(query)
+    db_book = res.scalars().first()
+    
+    if db_book:
+    
+        if db_book.user_id is None: # 현재 책이 대출되지 않은 상태
+            db_book.user_id = user_uuid
+            await db.commit()
+            await db.refresh(db_book)
+            return db_book
+        else: 
+            raise HTTPException(status_code=409, detail="Book is already borrowed")
+    else:
+        raise HTTPException(status_code=404, detail="Book not found")
+    
+async def return_book(db: AsyncSession, book_id: int, user_uuid: int):
+    query = select(model.Libs).where(model.Libs.id == book_id)
+    res = await db.execute(query)
+    db_book = res.scalars().first()
+    
+    if db_book:
+        if db_book.user_id == user_uuid:
+            db_book.user_id = None
+            await db.commit()
+            await db.refresh(db_book)
+            return db_book
+        else:
+            raise HTTPException(status_code=409, detail="Book is not borrowed by the user")
+    else:
+        raise HTTPException(status_code=404, detail="Book not found")
